@@ -21,6 +21,8 @@ from manager.utils import log, debug, \
     PRIMARY, REPLICA, UNASSIGNED, \
     UnknownPrimary, WaitTimeoutError
 
+from manager.discovery import FAILOVER_KEY
+
 
 class Node(object):
     """
@@ -81,6 +83,13 @@ class Node(object):
         _, primary_name = self.consul.read_lock(PRIMARY_KEY)
         log.debug('primary_name: %s' % primary_name)
         if primary_name == self.name:
+            self.cp.state = PRIMARY
+            return True
+
+        # A fail over is happening and I'm the only one left and I got the lock
+        _, failover_name = self.consul.read_lock(FAILOVER_KEY)
+        log.debug('failover_name: %s' % failover_name)
+        if failover_name == self.name:
             self.cp.state = PRIMARY
             return True
 
