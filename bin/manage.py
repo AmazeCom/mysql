@@ -349,7 +349,14 @@ def run_as_primary(node):
         return False
     node.cp.state = PRIMARY
 
-    conn = node.mysql.wait_for_connection()
+    conn = None
+    try:
+        conn = node.mysql.wait_for_connection()
+    except WaitTimeoutError:
+        # Access Denied is expected if we are loading from a backup
+        # and there are no other DBs to sync with
+        log.debug("[run_as_primary] no insecure connection found, database already setup")
+
     my = node.mysql
     if conn:
         # if we can make a connection w/o a password then this is the
