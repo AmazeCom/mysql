@@ -28,10 +28,6 @@ class Minio(object):
             access_key=self.access_key,
             secret_key=self.secret_key,
             secure=is_tls)
-        try:
-            self.client.make_bucket(self.bucket, location=self.location)
-        except minioerror.BucketAlreadyOwnedByYou:
-            pass
 
     @debug
     def get_backup(self, backup_id):
@@ -49,5 +45,9 @@ class Minio(object):
         """
         Upload the backup file to the expected path.
         """
+        try:
+            self.client.make_bucket(self.bucket, location=self.location)
+        except minioerror.BucketAlreadyOwnedByYou:
+            pass
         self.client.fput_object(self.bucket, backup_id, infile)
         return backup_id
