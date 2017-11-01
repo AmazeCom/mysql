@@ -127,7 +127,6 @@ The following variables control the names of keys written to Consul. They are op
 - `LAST_BACKUP_KEY`: The key used to store the path and timestamp of the most recent backup. (Defaults to `mysql-last-backup`.)
 - `LAST_BINLOG_KEY`: The key used to store the filename of the most recent binlog file on the primary. (Defaults to `mysql-last-binlog`.)
 - `BACKUP_NAME`: The name of the backup file that's stored on Manta, with optional [strftime](https://docs.python.org/2/library/time.html#time.strftime) directives. (Defaults to `mysql-backup-%Y-%m-%dT%H-%M-%SZ`.)
-- `BACKUP_TTL`: Time in seconds to wait between backups. (Defaults to `86400`, or 24 hours.)
 - `SESSION_NAME`: The name used for session locks. (Defaults to `mysql-primary-lock`.)
 
 These variables *may* be passed but it's not recommended to do this. Instead we'll set a one-time root password during DB initialization; the password will be dropped into the logs. Security can be improved by using a key management system in place of environment variables. The constructor for the `Node` class in `manage.py` would be a good place to hook in this behavior, which is out-of-scope for this demonstration.
@@ -136,9 +135,16 @@ These variables *may* be passed but it's not recommended to do this. Instead we'
 - `MYSQL_ONETIME_PASSWORD`: defaults to "yes"
 - `MYSQL_ROOT_PASSWORD`: default to being unset
 
+These variables are optional and used for tweaking the backup/ snapshot policies.
+
+- `BACKUP_TTL_SECS`: Time in seconds to wait between backups. Note: the containerpilot job 'snapshot-check' only runs every 5m. (Defaults to `86400`, or 24 hours.)
+- `BACKUP_FORMAT`: File format used to create snapshots. xbstream is compressed. The legacy format is `tar`. The snapshot restore function accepts both formats. (Defaults to `xbstream`.)
+- `BACKUP_DECOMPRESS_THREADS`: Number of cpu threads to use when decompressing xbstream snapshots. (Defaults to `4`.)
+
 These variables will be written to `/etc/my.cnf`.
 
 - `INNODB_BUFFER_POOL_SIZE`: innodb_buffer_pool_size
+- `MYSQL_USER_CONF`: Extra configs that the user can append to the mysql config file /etc/my.conf. Uses the format `key1=value1,key2=value2`. (Defaults to ''.)
 
 
 Environment variables are expanded automatically.

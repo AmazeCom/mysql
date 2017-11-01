@@ -7,6 +7,7 @@ services:
     restart: always
     expose:
       - 3306
+      - 9090
     network_mode: bridge
     environment:
       - MYSQL_USER=dbuser
@@ -14,7 +15,7 @@ services:
       - MYSQL_REPL_USER=repluser
       - MYSQL_REPL_PASSWORD=seekretReplPassword
       - MYSQL_DATABASE=demodb
-      - BACKUP_TTL=120
+      - BACKUP_TTL_SECS=43200
       - LOG_LEVEL=DEBUG
       - CONSUL=consul
       - SNAPSHOT_BACKEND=minio
@@ -28,7 +29,7 @@ services:
       - minio:minio
 
   consul:
-    image: consul:0.8.4
+    image: consul:1.0.0
     command: >
       agent -server -client=0.0.0.0 -dev -ui
     restart: always

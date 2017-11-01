@@ -13,6 +13,7 @@
       }{{ end }}
     },
     {
+// mysql must be the [1] element. Used in manager.config:update
       name: '{{ .SERVICE_NAME | default "mysql" }}',
       exec: [
         "mysqld",
@@ -47,7 +48,17 @@
       timeout: "10m",
       when: {
         interval: "5m"
+      }
+    },
+    {
+      // Let the head man know that we are leaving
+      name: "leave-consul",
+      exec: "consul leave",
+      when: {
+        source: "consul-agent",
+        once: "stopping"
       },
+      stopTimeout: "5s"
     },
     {{ if .CONSUL_AGENT }}{
       name: "consul-agent",
@@ -69,5 +80,8 @@
       name: '{{ .SERVICE_NAME | default "mysql" }}-primary',
       interval: 10
     }
-  ]
+  ],
+  telemetry: {
+    port: 9090
+  }
 }

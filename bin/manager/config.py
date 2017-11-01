@@ -1,12 +1,11 @@
 """ autopilotpattern/mysql ContainerPilot configuraton wrapper """
 import os
-import signal
 import subprocess
 
 import json5
 
-from manager.env import env, to_flag
-from manager.utils import debug, log, UNASSIGNED
+from env import env
+from utils import debug, log, UNASSIGNED, PRIMARY
 
 
 # pylint: disable=invalid-name,no-self-use,dangerous-default-value
@@ -22,6 +21,7 @@ class ContainerPilot(object):
         self.path = None
         self.config = None
 
+    @debug(log_output=True)
     def load(self, envs=os.environ):
         """
         Fetches the ContainerPilot config file and asks ContainerPilot
@@ -29,6 +29,7 @@ class ContainerPilot(object):
         interpolated.
         """
         self.path = env('CONTAINERPILOT', None, envs)
+        log.warn("loading cp {}".format(self.path))
         try:
             cfg = subprocess.check_output(['containerpilot', '-config',
                                            self.path, '-template'],
@@ -39,6 +40,8 @@ class ContainerPilot(object):
 
         config = json5.loads(cfg)
         self.config = config
+        if self.state and self.config['jobs'][1]['name'] == PRIMARY:
+            self.state = PRIMARY
 
     @debug(log_output=True)
     def update(self):

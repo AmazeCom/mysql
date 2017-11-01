@@ -9,6 +9,7 @@ services:
     # internal use as well
     expose:
       - 3306
+      - 9090
     labels:
       - triton.cns.services=mysql
     env_file: _env
@@ -20,7 +21,7 @@ services:
       - CONSUL=mc.svc.${TRITON_CNS_SEARCH_DOMAIN_PRIVATE}
 
   consul:
-    image: consul:0.8.4
+    image: consul:1.0.0
     command: >
       agent -server -client=0.0.0.0 -bootstrap -ui
     restart: always

@@ -10,7 +10,7 @@ import sys
 from manager.client import MySQL, MySQLError
 from manager.config import ContainerPilot
 from manager.discovery import Consul
-from manager.env import PRIMARY_KEY, BACKUP_NAME
+from manager.env import PRIMARY_KEY, BACKUP_NAME, BACKUP_FORMAT
 from manager.network import get_ip
 
 from manager.storage.manta_stor import Manta
@@ -161,6 +161,9 @@ def health(node):
         # Simple health check; exceptions result in a non-zero exit code
         node.mysql.query('select 1')
 
+        # When failing over the new node needs a chance to lock the kv
+        node.consul.mark_as_primary(node.name)
+
     elif node.is_replica():
         # TODO: we should make this check actual replication health
         # and not simply that replication has been established
@@ -263,7 +266,7 @@ def snapshot_task(node):
 @debug
 def write_snapshot(node):
     """
-    Calls out to innobackupex to snapshot the DB, then pushes the file
+    Calls out to xtrabackup to snapshot the DB, then pushes the file
     to Snapshot storage and writes that the work is completed in Consul.
     """
     now = datetime.utcnow()
@@ -271,16 +274,30 @@ def write_snapshot(node):
     backup_id = now.strftime('{}'.format(BACKUP_NAME))
     backup_time = now.isoformat()
 
-    with open('/tmp/backup.tar', 'w') as f:
-        subprocess.check_call(['/usr/bin/innobackupex',
-                               '--user={}'.format(node.mysql.repl_user),
-                               '--password={}'.format(node.mysql.repl_password),
-                               '--no-timestamp',
-                               #'--compress',
-                               '--stream=tar',
-                               '/tmp/backup'], stdout=f)
-    log.info('snapshot completed, uploading to object store')
-    out = node.snaps.put_backup(backup_id, '/tmp/backup.tar')
+    if BACKUP_FORMAT == 'tar':
+        with open('/tmp/backup.tar', 'w') as f:
+            subprocess.check_call(['/usr/bin/innobackupex',
+                                   '--user={}'.format(node.mysql.repl_user),
+                                   '--password={}'.format(node.mysql.repl_password),
+                                   '--no-timestamp',
+                                   '--stream=tar',
+                                   '/tmp/backup'], stdout=f)
+        log.info('snapshot completed, uploading to object store')
+        out = node.snaps.put_backup(backup_id, '/tmp/backup.tar')
+    else:
+        with open('/tmp/backup.xbstream', 'w') as f:
+            subprocess.check_call(['/usr/bin/xtrabackup',
+                                   '--backup',
+                                   '--user={}'.format(node.mysql.repl_user),
+                                   '--password={}'.format(node.mysql.repl_password),
+                                   '--no-timestamp',
+                                   '--compress',
+                                   '--stream=xbstream'], stdout=f)
+
+        log.info('snapshot completed, uploading to object store')
+        backup_id += '.xbstream'
+        out = node.snaps.put_backup(backup_id, '/tmp/backup.xbstream')
+
     log.info('snapshot uploaded to %s', out)
 
     # write the filename of the binlog to Consul so that we know if
@@ -358,7 +375,14 @@ def run_as_primary(node):
         return False
     node.cp.state = PRIMARY
 
-    conn = node.mysql.wait_for_connection()
+    conn = None
+    try:
+        conn = node.mysql.wait_for_connection()
+    except WaitTimeoutError:
+        # Access Denied is expected if we are loading from a backup
+        # and there are no other DBs to sync with
+        log.debug("[run_as_primary] no insecure connection found, database already setup")
+
     my = node.mysql
     if conn:
         # if we can make a connection w/o a password then this is the

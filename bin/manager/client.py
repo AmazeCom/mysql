@@ -8,9 +8,9 @@ import subprocess
 import string
 import time
 
-from manager.env import env, to_flag
-from manager.network import get_ip
-from manager.utils import debug, log, \
+from env import env, to_flag, BACKUP_DECOMPRESS_THREADS, MYSQL_USER_CONF
+from network import get_ip
+from utils import debug, log, \
     WaitTimeoutError, UnknownPrimary
 
 # pylint: disable=import-error,no-self-use,invalid-name,dangerous-default-value
@@ -49,9 +49,11 @@ class MySQL(object):
         pool_size = self._get_innodb_buffer_pool_size()
         with open(src, 'r') as f:
             template = string.Template(f.read())
+            user_conf = MYSQL_USER_CONF.replace(",", "\n")
             rendered = template.substitute(buffer=pool_size,
                                            server_id=self.server_id,
-                                           hostname=self.ip)
+                                           hostname=self.ip,
+                                           user_conf=user_conf)
         with open(dest, 'w') as f:
             f.write(rendered)
 
@@ -79,7 +81,7 @@ class MySQL(object):
         Convenience method for setting up a cached connection
         with the replication manager user.
         """
-        if self._conn:
+        if self._conn and self._conn.is_connected():
             return self._conn
         ctx = dict(user=self.repl_user,
                    password=self.repl_password,
@@ -143,10 +145,11 @@ class MySQL(object):
         except (WaitTimeoutError, MySQLError):
             raise # unrecoverable
 
+        cur = None
         try:
             cur = conn.cursor(dictionary=True, buffered=True)
             for stmt, params in self._query_buffer.items():
-                log.debug('%s %s', stmt, params)
+                log.debug('SQL Statement: %s %s', stmt, params)
                 cur.execute(stmt, params=params)
                 if not discard_results:
                     return cur.fetchall()
@@ -163,7 +166,8 @@ class MySQL(object):
         finally:
             # exceptions are an unrecoverable situation
             self._query_buffer.clear()
-            cur.close()
+            if cur is not None:
+                cur.close()
 
     @debug(log_output=True)
     def initialize_db(self):
@@ -174,7 +178,8 @@ class MySQL(object):
         self.make_datadir()
         log.info('Initializing database...')
         try:
-            subprocess.check_call(['/usr/bin/mysql_install_db',
+            subprocess.check_call(['mysqld',
+                                   '--initialize-insecure',
                                    '--user=mysql',
                                    '--datadir={}'.format(self.datadir)])
             log.info('Database initialized.')
@@ -269,7 +274,7 @@ class MySQL(object):
                  .format(self.repl_user), (self.repl_password,))
         self.add('GRANT SUPER, SELECT, INSERT, REPLICATION SLAVE, RELOAD'
                  ', LOCK TABLES, GRANT OPTION, REPLICATION CLIENT'
-                 ', RELOAD, DROP, CREATE '
+                 ', RELOAD, DROP, CREATE, PROCESS, CREATE USER '
                  'ON *.* TO `{}`@`%`; '
                  .format(self.repl_user))
         self.add('FLUSH PRIVILEGES;')
@@ -282,23 +287,52 @@ class MySQL(object):
         output for a bulk insert with the Connector/MySQL client.
         """
         try:
-            subprocess.check_output(
-                '/usr/bin/mysql_tzinfo_to_sql /usr/share/zoneinfo | '
-                '/usr/bin/mysql -uroot --protocol=socket '
-                '--socket=/var/run/mysqld/mysqld.sock')
+            ps = subprocess.Popen(['/usr/bin/mysql_tzinfo_to_sql',
+                                   '/usr/share/zoneinfo'],
+                                  stdout=subprocess.PIPE)
+            output = subprocess.check_output(
+                ['/usr/bin/mysql', '-uroot',
+                 '--protocol=socket',
+                 '--socket=/var/run/mysqld/mysqld.sock',
+                 'mysql'],
+                stdin=ps.stdout)
+            ps.wait()
+            log.debug('mysql_tzinfo_to_sql was successful %s', output)
         except (subprocess.CalledProcessError, OSError) as ex:
             log.error('mysql_tzinfo_to_sql returned error: %s', ex)
 
+    @debug(log_output=True)
     def restore_from_snapshot(self, filename):
         """
-        Use innobackupex to restore from a snapshot.
+        Use xtrabackup to restore from a snapshot.
         """
         self.make_datadir()
         infile = '/tmp/backup/{}'.format(filename)
-        subprocess.check_call(['tar', '-xif', infile, '-C', '/tmp/backup'])
-        subprocess.check_call(['/usr/bin/innobackupex',
+        if filename.endswith('.xbstream'):
+            with open(infile, 'r') as f:
+                subprocess.check_call(['xbstream',
+                                       '-x',
+                                       '--directory',
+                                       '/tmp/backup'], stdin=f)
+            subprocess.check_call(['xtrabackup',
+                                   '--decompress',
+                                   '--remove-original',
+                                   '--parallel',
+                                   BACKUP_DECOMPRESS_THREADS,
+                                   '--target-dir',
+                                   '/tmp/backup'])
+        else:
+            subprocess.check_call(['tar', '-xif', infile, '-C', '/tmp/backup'])
+
+        subprocess.check_call(['/usr/bin/xtrabackup',
+                               '--prepare',
+                               '--target-dir',
+                               '/tmp/backup/'
+                               ])
+        subprocess.check_call(['/usr/bin/xtrabackup',
                                '--force-non-empty-directories',
                                '--copy-back',
+                               '--target-dir',
                                '/tmp/backup'])
         self.take_ownership()
 
@@ -348,11 +382,11 @@ class MySQL(object):
             ["{}:'{}'@{}".format(user, passwd, ip) for ip in ips]
         )
         return subprocess.check_call(
-            ['mysqlrpladmin',
-             '--slaves={}'.format(candidates),
-             '--candidates={}'.format(candidates),
-             '--rpl-user={}:{}'.format(user, passwd),
-             'failover']
+            ["mysqlrpladmin",
+             "--slaves={}".format(candidates),
+             "--candidates={}".format(candidates),
+             "--rpl-user={}:'{}'".format(user, passwd),
+             "failover"]
         )
 
     @debug()

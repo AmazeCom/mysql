@@ -44,4 +44,7 @@ LAST_BACKUP_KEY = env('LAST_BACKUP_KEY', 'mysql-last-backup')
 BACKUP_LOCK_KEY = env('BACKUP_LOCK_KEY', 'mysql-backup-running')
 LAST_BINLOG_KEY = env('LAST_BINLOG_KEY', 'mysql-last-binlog')
 BACKUP_NAME = env('BACKUP_NAME', 'mysql-backup-%Y-%m-%dT%H-%M-%SZ')
-BACKUP_TTL = env('BACKUP_TTL', 86400, fn='{}s'.format) # every 24 hours
+BACKUP_TTL_SECS = env('BACKUP_TTL_SECS', '86400')  # every 24 hours
+BACKUP_FORMAT = env('BACKUP_FORMAT', 'xbstream')
+BACKUP_DECOMPRESS_THREADS = env('BACKUP_DECOMPRESS_THREADS', '4')
+MYSQL_USER_CONF = env('MYSQL_USER_CONF', '')  # format: key1=value1,key2=value2

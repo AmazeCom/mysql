@@ -5,10 +5,11 @@ import json
 import os
 import time
 
-from manager.env import env, to_flag, \
+from env import env, to_flag, \
     PRIMARY_KEY, LAST_BACKUP_KEY, \
-    BACKUP_TTL, BACKUP_LOCK_KEY, LAST_BINLOG_KEY
-from manager.utils import debug, log, \
+    BACKUP_LOCK_KEY, LAST_BINLOG_KEY, \
+    BACKUP_TTL_SECS
+from utils import debug, log, \
     WaitTimeoutError, UnknownPrimary
 
 # pylint: disable=import-error,invalid-name,dangerous-default-value
@@ -68,6 +69,9 @@ class Consul(object):
                 session_id = f.read()
         except IOError:
             session_id = self.create_session(key, ttl)
+        if not self.valid_session(session_id):
+            session_id = self.create_session(key, ttl)
+            log.debug("New session created %s", session_id)
         if cached:
             with open(on_disk, 'w') as f:
                 f.write(session_id)
@@ -87,6 +91,14 @@ class Consul(object):
         if not session_id:
             session_id = self.get_session()
         self.client.session.renew(session_id)
+
+    @debug(log_output=True)
+    def valid_session(self, session_id=None):
+        """ Checks if the session is still valid on Consul """
+        if not session_id:
+            session_id = self.get_session()
+        _, session = self.client.session.info(session_id)
+        return session
 
     @debug(log_output=True)
     def lock(self, key, value, session_id):
@@ -278,7 +290,7 @@ class Consul(object):
             raise # unexpected value / invalid JSON in Consul
 
         parsed_dt = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%S.%f")
-        yesterday = datetime.utcnow() - timedelta(days=1)
+        yesterday = datetime.utcnow() - timedelta(seconds=int(BACKUP_TTL_SECS))
         if parsed_dt < yesterday:
             return True
 
