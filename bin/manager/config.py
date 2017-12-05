@@ -40,8 +40,6 @@ class ContainerPilot(object):
 
         config = json5.loads(cfg)
         self.config = config
-        if self.state and self.config['jobs'][1]['name'] == PRIMARY:
-            self.state = PRIMARY
 
     @debug(log_output=True)
     def update(self):

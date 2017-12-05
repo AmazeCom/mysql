@@ -115,7 +115,7 @@ These variables are optional but you most likely want them:
 
 - `SERVICE_NAME`: the name by which this instance will register itself in consul. If you do not provide one, defaults to `"mysql"`.
 - `MYSQL_REPL_USER`: this user will be used on all instances to set up MySQL replication. If not set, then replication will not be set up on the replicas.
-- `MYSQL_REPL_PASSWORD`: this password will be used on all instances to set up MySQL replication. If not set, then replication will not be set up on the replicas.
+- `MYSQL_REPL_PASSWORD`: this password will be used on all instances to set up MySQL replication. If not set, then replication will not be set up on the replicas. Must be less than 32 characters. 
 - `MYSQL_DATABASE`: create this database on startup if it doesn't already exist. The `MYSQL_USER` user will be granted superuser access to that DB.
 - `LOG_LEVEL`: will set the logging level of the `manage.py` application. It defaults to `DEBUG` and uses the Python stdlib [log levels](https://docs.python.org/2/library/logging.html#levels). The `DEBUG` log level is extremely verbose -- in production you'll want this to be at `INFO` or above.
 - `CONSUL` is the hostname for the Consul instance(s). Defaults to `consul`.

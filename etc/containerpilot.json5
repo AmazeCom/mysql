@@ -50,16 +50,6 @@
         interval: "5m"
       }
     },
-    {
-      // Let the head man know that we are leaving
-      name: "leave-consul",
-      exec: "consul leave",
-      when: {
-        source: "consul-agent",
-        once: "stopping"
-      },
-      stopTimeout: "5s"
-    },
     {{ if .CONSUL_AGENT }}{
       name: "consul-agent",
       restarts: "unlimited",
