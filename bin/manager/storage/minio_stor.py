@@ -21,13 +21,15 @@ class Minio(object):
         self.bucket = env('MINIO_BUCKET', 'backups', envs)
         self.location = env('MINIO_LOCATION', 'us-east-1', envs)
         self.url = env('MINIO_URL', 'minio:9000')
+        timeout = env('MINIO_TIMEOUT', '120', envs)
         is_tls = env('MINIO_TLS_SECURE', False, envs, fn=to_flag)
 
         self.client = pyminio(
             self.url,
             access_key=self.access_key,
             secret_key=self.secret_key,
-            secure=is_tls)
+            secure=is_tls,
+            timeout=timeout)
 
     @debug
     def get_backup(self, backup_id):

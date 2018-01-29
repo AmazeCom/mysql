@@ -126,6 +126,7 @@ These variables control where the database snapshots are saved.
 - `MINIO_LOCATION`: Define the region/ location where the bucket is. (Defaults to `us-east-1`.)
 - `MINIO_URL`: The url of minio. (Defaults to `minio:9000`.)
 - `MINIO_TLS_SECURE`: Use a secure https connection to minio. (Defaults to `false`.)
+- `MINIO_TIMEOUT`: Connection request timeout. (Defaults to `120` seconds.)
 
 ##### Local
 - `STORAGE_DIR`: The local directory to store snapshots. (Defaults to `/tmp/snapshots`.)
