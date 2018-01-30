@@ -450,5 +450,7 @@ def main():
 
     cmd(node)
 
+    my.close()
+
 if __name__ == '__main__':
     main()

@@ -89,6 +89,13 @@ class MySQL(object):
         self._conn = self.wait_for_connection(**ctx)
         return self._conn
 
+    def close(self):
+        """
+        Convenience method for disconnecting from DB
+        """
+        if self._conn and self._conn.is_connected():
+            self._conn.close()
+
     @debug()
     def wait_for_connection(self, user='root', password=None, database=None,
                             timeout=10):

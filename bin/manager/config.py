@@ -29,7 +29,7 @@ class ContainerPilot(object):
         interpolated.
         """
         self.path = env('CONTAINERPILOT', None, envs)
-        log.warn("loading cp {}".format(self.path))
+        log.debug("loading cp {}".format(self.path))
         try:
             cfg = subprocess.check_output(['containerpilot', '-config',
                                            self.path, '-template'],

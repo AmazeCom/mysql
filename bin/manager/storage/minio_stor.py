@@ -47,9 +47,8 @@ class Minio(object):
         """
         Upload the backup file to the expected path.
         """
-        try:
+        if not self.client.bucket_exists(self.bucket):
             self.client.make_bucket(self.bucket, location=self.location)
-        except minioerror.BucketAlreadyOwnedByYou:
-            pass
+
         self.client.fput_object(self.bucket, backup_id, infile)
         return backup_id
