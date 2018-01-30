@@ -29,7 +29,7 @@ class Minio(object):
             access_key=self.access_key,
             secret_key=self.secret_key,
             secure=is_tls,
-            timeout=timeout)
+            timeout=float(timeout))
 
     @debug
     def get_backup(self, backup_id):
