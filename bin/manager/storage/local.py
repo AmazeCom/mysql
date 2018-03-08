@@ -11,6 +11,7 @@ class Local(object):
     The Manta class wraps access to the Manta object store, where we'll put
     our MySQL backups.
     """
+    @debug
     def __init__(self, envs=os.environ):
         self.dir = env('STORAGE_DIR', '/tmp/snapshots', envs)
 

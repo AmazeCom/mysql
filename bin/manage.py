@@ -417,6 +417,7 @@ def run_as_replica(node):
 
 # ---------------------------------------------------------
 
+@debug
 def main():
     """
     Parse argument as command and execute that command with

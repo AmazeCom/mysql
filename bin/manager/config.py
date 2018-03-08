@@ -15,7 +15,7 @@ class ContainerPilot(object):
     ContainerPilot config is where we rewrite ContainerPilot's own config
     so that we can dynamically alter what service we advertise.
     """
-
+    @debug
     def __init__(self):
         self.state = UNASSIGNED
         self.path = None

@@ -22,6 +22,7 @@ class MySQL(object):
     MySQL represents the connection to and configuration of the MySQL
     process and its clients.
     """
+    @debug
     def __init__(self, envs=os.environ):
         self.mysql_db = env('MYSQL_DATABASE', None, envs)
         self.mysql_user = env('MYSQL_USER', None, envs)

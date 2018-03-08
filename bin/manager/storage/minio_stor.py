@@ -15,6 +15,7 @@ class Minio(object):
     The Minio class wraps access to the Minio object store, where we'll put
     our MySQL backups.
     """
+    @debug
     def __init__(self, envs=os.environ):
         self.access_key = env('MINIO_ACCESS_KEY', None, envs)
         self.secret_key = env('MINIO_SECRET_KEY', None, envs)

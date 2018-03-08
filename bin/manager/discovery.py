@@ -25,6 +25,7 @@ MAX_SESSION=3600
 class Consul(object):
     """ Consul represents the Consul instance this node talks to """
 
+    @debug
     def __init__(self, envs=os.environ):
         """
         Figures out the Consul client hostname based on whether or

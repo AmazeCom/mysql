@@ -16,6 +16,7 @@ class Manta(object):
     The Manta class wraps access to the Manta object store, where we'll put
     our MySQL backups.
     """
+    @debug
     def __init__(self, envs=os.environ):
         self.account = env('MANTA_USER', None, envs)
         self.user = env('MANTA_SUBUSER', None, envs)
