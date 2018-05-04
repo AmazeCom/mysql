@@ -70,9 +70,7 @@ class Consul(object):
                 session_id = f.read()
         except IOError:
             session_id = self.create_session(key, ttl)
-        if not self.valid_session(session_id):
-            session_id = self.create_session(key, ttl)
-            log.debug("New session created %s", session_id)
+
         if cached:
             with open(on_disk, 'w') as f:
                 f.write(session_id)
@@ -92,14 +90,6 @@ class Consul(object):
         if not session_id:
             session_id = self.get_session()
         self.client.session.renew(session_id)
-
-    @debug(log_output=True)
-    def valid_session(self, session_id=None):
-        """ Checks if the session is still valid on Consul """
-        if not session_id:
-            session_id = self.get_session()
-        _, session = self.client.session.info(session_id)
-        return session
 
     @debug(log_output=True)
     def lock(self, key, value, session_id):
