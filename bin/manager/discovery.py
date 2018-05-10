@@ -15,6 +15,8 @@ from utils import debug, log, \
 # pylint: disable=import-error,invalid-name,dangerous-default-value
 import consul as pyconsul
 
+from consul import ConsulException
+
 SESSION_CACHE_FILE = env('SESSION_CACHE_FILE', '/tmp/mysql-session')
 SESSION_NAME = env('SESSION_NAME', 'mysql-primary-lock')
 SESSION_TTL = env('SESSION_TTL', 25, fn=int)
@@ -243,6 +245,11 @@ class Consul(object):
         except IOError:
             # couldn't obtain local file lock
             return False
+        except ConsulException:
+            # Session was invalid,
+            # we should toss the stored key and try again next time
+            self.unlock_snapshot()
+            return False
 
     @debug
     def unlock_snapshot(self):
@@ -252,13 +259,14 @@ class Consul(object):
         """
         lock_filename = '/tmp/' + BACKUP_LOCK_KEY
         try:
-            with open(BACKUP_LOCK_KEY, 'r+') as f:
+            with open(lock_filename, 'r+') as f:
                 session_id = f.read()
                 self.unlock(BACKUP_LOCK_KEY, session_id)
                 fcntl.flock(f, fcntl.LOCK_UN)
                 os.remove(lock_filename)
-        except (IOError, OSError):
+        except (IOError, OSError) as e:
             # we don't have a session file so just move on
+            log.debug('could not remove %s %s', lock_filename, e)
             pass
 
     @debug
