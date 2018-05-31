@@ -68,7 +68,7 @@ class Consul(object):
         if not cached:
             return self.create_session(key, ttl)
         try:
-            with open(on_disk, 'r+') as f:
+            with open(on_disk, 'r') as f:
                 session_id = f.read()
         except IOError:
             session_id = self.create_session(key, ttl)
