@@ -6,8 +6,8 @@
   jobs: [
     {
       name: "preStart",
-      exec: "python /usr/local/bin/manage.py",
-      {{ if .CONSUL_AGENT }}when: {
+      exec: "python /usr/local/bin/manage.py"{{ if .CONSUL_AGENT }},
+      when: {
         source: "consul-agent",
         once: "healthy"
       }{{ end }}
@@ -32,7 +32,8 @@
         exec: "python /usr/local/bin/manage.py health",
         interval: 5,
         ttl: 25
-      }
+      },
+      "restarts": "unlimited"
     },
     {
       name: "onChange",
@@ -44,10 +45,11 @@
     },
     {
       name: "snapshot-check",
-      exec: "python /usr/local/bin/manage.py snapshot_task",
-      timeout: "10m",
+      exec: "/usr/local/bin/snapshot-loop",
+      restarts: "unlimited",
       when: {
-        interval: "5m"
+        source: "preStart",
+        once: "exitSuccess"
       }
     },
     {{ if .CONSUL_AGENT }}{
@@ -56,10 +58,14 @@
       exec: [
         "/usr/local/bin/consul", "agent",
         "-data-dir=/data",
-        "-config-dir=/config"
+        "-config-dir=/config",
+        "-rejoin",
+        "-retry-join", "{{ .CONSUL }}",
+        "-retry-max", "10",
+        "-retry-interval", "10s"
       ],
       health: {
-        exec: 'consul join {{ .CONSUL | default "consul"}}',
+        "exec": "consul operator raft list-peers 2>/dev/null | grep -q leader",
         interval: 5,
         ttl: 10
       }

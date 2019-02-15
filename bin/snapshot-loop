@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+while true
+do
+	sleep 600
+	python /usr/local/bin/manage.py snapshot_task
+done

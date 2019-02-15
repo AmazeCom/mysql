@@ -93,6 +93,9 @@ class Node(object):
             self.cp.state = PRIMARY
             return True
 
+        log.debug('forcing to be primary')
+        self.cp.state = PRIMARY
+        return True
         self.cp.state = UNASSIGNED
         return False
 

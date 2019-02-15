@@ -19,7 +19,7 @@ from consul import ConsulException
 
 SESSION_CACHE_FILE = env('SESSION_CACHE_FILE', '/tmp/mysql-session')
 SESSION_NAME = env('SESSION_NAME', 'mysql-primary-lock')
-SESSION_TTL = env('SESSION_TTL', 25, fn=int)
+SESSION_TTL = env('SESSION_TTL', 300, fn=int)
 FAILOVER_KEY = env('FAILOVER_IN_PROGRESS', 'FAILOVER_IN_PROGRESS')
 FAILOVER_SESSION_FILE = env('FAILOVER_SESSION_FILE', '/tmp/failover-session')
 MAX_SESSION=3600
